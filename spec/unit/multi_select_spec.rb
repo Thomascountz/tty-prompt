@@ -17,8 +17,12 @@ RSpec.describe TTY::Prompt do
     out = []
     out << "\e[?25l" if init
     out << prompt << " "
-    out << "(min. #{options[:min]}) " if options[:min]
-    out << "(max. #{options[:max]}) " if options[:max]
+    if options[:min] || options[:max]
+      minmax_help = []
+      minmax_help << "min. #{options[:min]}" if options[:min]
+      minmax_help << "max. #{options[:max]}" if options[:max]
+      out << "(#{minmax_help.join(', ')}) "
+    end
     out << selected.join(", ")
     out << " " if (init || hint) && !selected.empty?
     out << "\e[90m(#{hint})\e[0m" if hint
@@ -901,6 +905,44 @@ RSpec.describe TTY::Prompt do
         output_helper("What letter?", choices, "C", %w[B], max: 2) +
         output_helper("What letter?", choices, "C", %w[B C], max: 2) +
         exit_message("What letter?", %w[B C])
+
+      expect(prompt.output.string).to eq(expected_output)
+    end
+  end
+
+  context "with :min and :max" do
+    it "raises error when min is greater than max" do
+      choices = %w[A B C]
+      prompt.input << " " << "\r"
+      prompt.input.rewind
+
+      expect {
+        prompt.multi_select("What letter?", choices, min: 3, max: 2)
+      }.to raise_error(TTY::Prompt::ConfigurationError,
+                       /min cannot be greater than max/)
+    end
+
+    it "requires number of choices" do
+      choices = %w[A B C D]
+      prompt.on(:keypress) { |e|
+        prompt.trigger(:keyup)   if e.value == "k"
+        prompt.trigger(:keydown) if e.value == "j"
+      }
+
+      prompt.input << " " << "\r" << "j" << " " << "\r"
+      prompt.input.rewind
+
+      value = prompt.multi_select("Select letters?", choices, min: 2, max: 3)
+      expect(value).to eq(%w[A B])
+
+      expected_output =
+        output_helper("Select letters?", choices, "A", [], init: true, min: 2, max: 3,
+          hint: "Press #{up_down} arrow to move, Space to select and Enter to finish") +
+        output_helper("Select letters?", choices, "A", %w[A], min: 2, max: 3) +
+        output_helper("Select letters?", choices, "A", %w[A], min: 2, max: 3) +
+        output_helper("Select letters?", choices, "B", %w[A], min: 2, max: 3) +
+        output_helper("Select letters?", choices, "B", %w[A B], min: 2, max: 3) +
+        exit_message("Select letters?", %w[A B])
 
       expect(prompt.output.string).to eq(expected_output)
     end

@@ -1,5 +1,8 @@
 # Change log
 
+## [Unreleased]
+* Add validation to ensure min is less than or equal to max in #multi_select
+
 ## [v0.23.1] - 2021-04-17
 
 ### Changed
