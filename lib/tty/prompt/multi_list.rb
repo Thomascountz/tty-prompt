@@ -23,6 +23,7 @@ module TTY
         @echo = options.fetch(:echo, true)
         @min  = options[:min]
         @max  = options[:max]
+        validate_min_max
       end
 
       # Set a minimum number of choices
@@ -30,6 +31,7 @@ module TTY
       # @api public
       def min(value)
         @min = value
+        validate_min_max
       end
 
       # Set a maximum number of choices
@@ -37,6 +39,7 @@ module TTY
       # @api public
       def max(value)
         @max = value
+        validate_min_max
       end
 
       # Callback fired when enter/return key is pressed
@@ -45,7 +48,7 @@ module TTY
       def keyenter(*)
         valid = true
         valid = @min <= @selected.size if @min
-        valid = @selected.size <= @max if @max
+        valid &= @selected.size <= @max if @max
 
         super if valid
       end
@@ -218,6 +221,19 @@ module TTY
         end
 
         output.join
+      end
+
+      # Validate min and max requirements are within bounds
+      #
+      # @raise [ConfigurationError]
+      #   raised when min is greater than max
+      #   or when min is less than available choices
+      #
+      # @api private
+      def validate_min_max
+        return unless @min && @max && @min > @max
+
+        raise ConfigurationError, "min cannot be greater than max"
       end
     end # MultiList
   end # Prompt
